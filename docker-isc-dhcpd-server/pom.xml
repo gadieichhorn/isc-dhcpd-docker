@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.rds</groupId>
+        <artifactId>docker.isc.dhcpd</artifactId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+    <name>Docker :: ISC :: DHCPD :: Server</name>
+    <artifactId>docker-isc-dhcpd-server</artifactId>
+
+    <properties>
+    </properties>
+
+    <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/filtered-resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>**/*</include>
+                </includes>
+            </resource>
+        </resources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.0.2</version>
+                <executions>
+                    <execution>
+                        <id>process-resources</id>
+                        <goals>
+                            <goal>resources</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>io.fabric8</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <configuration>
+                    <verbose>true</verbose>
+                    <images>
+                        <image>
+                            <name>gadieichhorn/isc-dhcpd-server:${project.version}</name>
+
+                            <build>
+                                <labels>
+                                    <version>${project.version}</version>
+                                </labels>
+                                <tags>
+                                    <tag>latest</tag>
+                                </tags>
+                                <ports>
+                                    <port>67/udp</port>
+                                </ports>
+                                <optimise>true</optimise>
+                                <from>ubuntu:xenial</from>
+                                <assembly>
+                                    <mode>dir</mode>
+                                    <basedir>/</basedir>
+                                    <inline xmlns="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/plugins/maven-assembly-plugin/assembly/1.1.2 http://maven.apache.org/xsd/assembly-1.1.2.xsd">
+                                        <id>karaf</id>
+                                        <fileSets>
+                                            <fileSet>
+                                                <directory>${project.build.directory}/classes/</directory>
+                                                <includes>
+                                                    <include>**/*.leases</include>
+                                                    <include>**/*.conf</include>
+                                                </includes>
+                                                <outputDirectory>./opt</outputDirectory>
+                                            </fileSet>
+                                        </fileSets>
+                                    </inline>
+                                </assembly>
+                                <volumes>
+                                    <volume>/data</volume>
+                                </volumes>
+                                <env>
+                                </env>
+                                <runCmds>
+                                    <run>apt-get -q -y update </run>
+                                    <run>apt-get -q -y -o "DPkg::Options::=--force-confold" -o "DPkg::Options::=--force-confdef" install apt-utils </run>
+                                    <run>apt-get -q -y -o "DPkg::Options::=--force-confold" -o "DPkg::Options::=--force-confdef" dist-upgrade </run>
+                                    <run>apt-get -q -y -o "DPkg::Options::=--force-confold" -o "DPkg::Options::=--force-confdef" install isc-dhcp-server man python3 </run>
+                                    <run>apt-get -q -y autoremove </run>
+                                    <run>apt-get -q -y clean </run>
+                                    <run>rm -rf /var/lib/apt/lists/*</run>
+                                </runCmds>
+                                <entryPoint>
+                                    <exec>
+                                        <arg>dhcpd</arg>
+                                        <arg>-cf</arg>
+                                        <arg>/opt/data/dhcpd.conf</arg>
+                                        <arg>-if</arg>
+                                        <arg>/opt/data/dhcpd.leases</arg>
+                                        <arg>--no-pid</arg>
+                                        <arg>-4</arg>
+                                        <arg>-f</arg>
+                                        <arg>eth0</arg>
+                                    </exec>
+                                </entryPoint>
+                            </build>
+
+                            <run>
+                                <labels>
+                                    <version>${project.version}</version>
+                                    <artifactId>${project.artifactId}</artifactId>
+                                </labels>
+                                <ports>
+                                    <port>${host.port}:8181</port>
+                                </ports>
+                                <log>
+                                    <prefix>ISC-DHCPD</prefix>
+                                    <date>ISO8601</date>
+                                    <color>green</color>
+                                </log>
+                                <volumes>
+                                    <bind>
+                                        <volume>/c/Users/gadei/development/github/isc-dhcpd-docker/data:/data</volume>
+                                    </bind>
+                                </volumes>
+                                <wait>
+                                    <time>30000</time>
+                                    <kill>1000</kill>
+                                    <shutdown>5000</shutdown>
+                                </wait>
+                            </run>
+
+                        </image>
+                    </images>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
